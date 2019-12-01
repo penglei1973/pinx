@@ -7,6 +7,7 @@ import (
 	"net"
 	"pinx/pinterface"
 	"pinx/utils"
+	"sync"
 )
 
 type Connection struct {
@@ -18,6 +19,9 @@ type Connection struct {
 	MsgHandle    pinterface.IMsgHandle // 连接处理的router
 	MsgChan      chan []byte           // 无缓冲管道，用于读写两个goroutine之间消息通信
 	MsgBuffChan  chan []byte           //有缓冲管道
+
+	Property     map[string]interface{}
+	PropertyLock sync.RWMutex
 }
 
 // 创建连接的方法
@@ -31,6 +35,7 @@ func NewConntion(server pinterface.IServer, conn *net.TCPConn, connID uint32, ms
 		MsgHandle:    msghandler,
 		MsgChan:      make(chan []byte),
 		MsgBuffChan:  make(chan []byte, utils.GlobalObject.MaxMsgChanLen),
+		Property:     make(map[string]interface{}),
 	}
 
 	// 将新创建的Conn添加到连接管理中
@@ -240,4 +245,24 @@ func (c *Connection) SendBuffMsg(msgId uint32, data []byte) error {
 	*/
 
 	return nil
+}
+func (c *Connection) SetProperty(key string, value interface{}) {
+	c.PropertyLock.Lock()
+	defer c.PropertyLock.Unlock()
+	c.Property[key] = value
+}
+func (c *Connection) GetProperty(key string) (interface{}, error) {
+	c.PropertyLock.RLock()
+	defer c.PropertyLock.RUnlock()
+	if value, ok := c.Property[key]; ok {
+		return value, nil
+	} else {
+		return nil, errors.New("no property found")
+	}
+}
+func (c *Connection) RemoveProperty(key string) {
+	c.PropertyLock.RLock()
+	defer c.PropertyLock.RUnlock()
+
+	delete(c.Property, key)
 }

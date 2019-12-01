@@ -11,6 +11,10 @@ type IConnection interface {
 	RemoteAddr() net.Addr                    // 获取 远程客户端地址信息
 	SendMsg(msgId uint32, data []byte) error // 发送数据给客户端
 	SendBuffMsg(uint32, []byte) error        // 发送给客户端带缓存
+
+	SetProperty(key string, value interface{})
+	GetProperty(key string) (interface{}, error)
+	RemoveProperty(key string)
 }
 
 // 定义一个同一处理连接业务接口
