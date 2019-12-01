@@ -43,8 +43,8 @@ func NewConntion(server pinterface.IServer, conn *net.TCPConn, connID uint32, ms
 func (c *Connection) StartWriter() {
 	fmt.Println("Writer Goroutine is running")
 	defer func() {
+		c.Stop()
 		fmt.Println(c.RemoteAddr().String(), "[conn write exit]")
-		// c.Stop()
 	}()
 
 	for {
@@ -82,16 +82,14 @@ func (c *Connection) StartReader() {
 	}()
 
 	for {
-		fmt.Println("read begin...")
 		dp := NewDataPack()
 		headData := make([]byte, dp.GetHeadLen())
 		_, err := io.ReadFull(c.GetTCPConnection(), headData) // readfull 把headdata填充满
 		if err != nil {
-			fmt.Println("read head error")
+			//fmt.Println("read head error")
 			c.ExitBuffchan <- true
 			continue
 		} else {
-			fmt.Println("head is ", headData)
 		}
 
 		// 将headData字节流 拆包到msg中
@@ -138,6 +136,8 @@ func (c *Connection) Start() {
 	go c.StartReader()
 	go c.StartWriter()
 
+	c.TcpServer.CallOnConnStart(c)
+
 	for {
 		select {
 		case <-c.ExitBuffchan:
@@ -162,13 +162,15 @@ func (c *Connection) Stop() {
 	c.Conn.Close()
 
 	// 通知从缓冲队列读数据的业务，该连接已经关闭
-	c.ExitBuffchan <- true
+	// c.ExitBuffchan <- true
+
+	c.TcpServer.CallOnConnStop(c)
 
 	// 将连接从连接管理器中删除
 	c.TcpServer.GetConnMgr().Remove(c)
 
 	// 关闭该连接全部管道
-	close(c.ExitBuffchan)
+	// close(c.ExitBuffchan)
 	close(c.MsgBuffChan)
 	close(c.MsgChan)
 

@@ -57,9 +57,23 @@ func (this *PingRouter) PostHandle(request pinterface.IRequest) {
 	*/
 }
 
+func conBegin(conn pinterface.IConnection) {
+	fmt.Println("conn begin")
+	err := conn.SendMsg(2, []byte("connn begin .........."))
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func conEnd(conn pinterface.IConnection) {
+	fmt.Println("conn end")
+}
+
 func main() {
 	// 创建一个server实例
 	s := pnet.NewServer("[pinx with router1.0]")
+	s.SetOnConnStart(conBegin)
+	s.SetOnConnStop(conEnd)
 	s.AddRouter(1, &PingRouter{})
 	http.HandleFunc("/", handler)
 	go func() {

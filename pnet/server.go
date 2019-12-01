@@ -17,6 +17,9 @@ type Server struct {
 	Cid       uint32                  // 服务器连接请求数handler gorountine 开启的数量
 	MsgRouter pinterface.IMsgHandle   //当前server绑定回调router
 	ConnMar   pinterface.IConnManager // 连接管理模块
+
+	OnConnStart func(conn pinterface.IConnection)
+	OnConnStop  func(conn pinterface.IConnection)
 }
 
 func NewServer(name string) pinterface.IServer {
@@ -59,7 +62,7 @@ func (s *Server) Start() {
 		}
 
 		// 已经监听成功
-		fmt.Println("start pinx server ", s.Name, "successfu, lintening...")
+		fmt.Println("start pinx server ", s.Name, "successfu, listening...")
 
 		// 3. 启动server网络连接业务
 		for {
@@ -68,6 +71,8 @@ func (s *Server) Start() {
 			if err != nil {
 				fmt.Println("Accept err ", err)
 				continue
+			} else {
+				fmt.Printf("%s is comming\n", conn.RemoteAddr())
 			}
 
 			// 3.2 TODO Server.Start() 设置服务器最大连接限制, 如果超过最大连接，那么则关闭此新的连接
@@ -127,4 +132,25 @@ func (s *Server) AddRouter(msgId uint32, router pinterface.IRouter) {
 }
 func (s *Server) GetConnMgr() pinterface.IConnManager {
 	return s.ConnMar
+}
+
+func (s *Server) SetOnConnStart(hookFunc func(pinterface.IConnection)) {
+	s.OnConnStart = hookFunc
+}
+
+func (s *Server) SetOnConnStop(hookFunc func(pinterface.IConnection)) {
+	s.OnConnStop = hookFunc
+}
+
+func (s *Server) CallOnConnStart(conn pinterface.IConnection) {
+	if s.OnConnStart != nil {
+		fmt.Printf("callonconnstart...")
+		s.OnConnStart(conn)
+	}
+}
+func (s *Server) CallOnConnStop(conn pinterface.IConnection) {
+	if s.OnConnStop != nil {
+		fmt.Printf("callonconnstop...")
+		s.OnConnStop(conn)
+	}
 }
